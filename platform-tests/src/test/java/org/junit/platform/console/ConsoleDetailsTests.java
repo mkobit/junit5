@@ -110,7 +110,7 @@ class ConsoleDetailsTests {
 						"└─ JUnit Jupiter ✔", //
 						"   └─ ConsoleDetailsTests$Container ✔", //
 						"      └─ reportSingleEntryWithSingleMapping(TestReporter) ✔", //
-						"            ....-..-..T..:..:......: foo = `bar`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:...... foo = `bar`" + REGEX_PATTERN, //
 				})
 		@Test
 		void reportSingleEntryWithSingleMapping(TestReporter reporter) {
@@ -122,8 +122,8 @@ class ConsoleDetailsTests {
 						"└─ JUnit Jupiter ✔", //
 						"   └─ ConsoleDetailsTests$Container ✔", //
 						"      └─ reportMultiEntriesWithSingleMapping(TestReporter) ✔", //
-						"            ....-..-..T..:..:......: foo = `bar`" + REGEX_PATTERN, //
-						"            ....-..-..T..:..:......: far = `boo`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:...... foo = `bar`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:...... far = `boo`" + REGEX_PATTERN, //
 				})
 		@Test
 		void reportMultiEntriesWithSingleMapping(TestReporter reporter) {
@@ -139,7 +139,7 @@ class ConsoleDetailsTests {
 						"            ....-..-..T..:..:......" + REGEX_PATTERN, //
 						"               user name = `dk38`", //
 						"               award year = `1974`", //
-						"            ....-..-..T..:..:......: single = `mapping`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:...... single = `mapping`" + REGEX_PATTERN, //
 						"            ....-..-..T..:..:......" + REGEX_PATTERN, //
 						"               user name = `st77`", //
 						"               award year = `1977`", //
