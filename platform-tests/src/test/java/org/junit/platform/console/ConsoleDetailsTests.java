@@ -202,7 +202,7 @@ class ConsoleDetailsTests {
 						if (expectedLine.endsWith(REGEX_PATTERN)) {
 							expectedLine = expectedLine.substring(0, expectedLine.length() - REGEX_PATTERN.length());
 							assertTrue(actualLine.matches(expectedLine), "\nactual string = " + actualLine
-									+ "\nregex pattern = " + expectedLine + "\n" + result.out);
+									+ "\nregex pattern = " + expectedLine + "\n" + result.out + "\n" + result.err);
 							continue;
 						}
 						assertEquals(expectedLine, actualLine);

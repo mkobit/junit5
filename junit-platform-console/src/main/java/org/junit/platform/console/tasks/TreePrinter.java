@@ -10,13 +10,17 @@
 
 package org.junit.platform.console.tasks;
 
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static org.junit.platform.commons.meta.API.Usage.Internal;
 import static org.junit.platform.console.tasks.Color.CONTAINER;
 import static org.junit.platform.console.tasks.Color.FAILED;
+import static org.junit.platform.console.tasks.Color.GREEN;
 import static org.junit.platform.console.tasks.Color.NONE;
 import static org.junit.platform.console.tasks.Color.SKIPPED;
+import static org.junit.platform.console.tasks.Color.YELLOW;
 
 import java.io.PrintWriter;
+import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -31,6 +35,8 @@ import org.junit.platform.engine.reporting.ReportEntry;
  */
 @API(Internal)
 class TreePrinter {
+
+	private final static DateTimeFormatter REPORT_ENTRY_FORMATTER = ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSS");
 
 	private final PrintWriter out;
 	private final Theme theme;
@@ -100,9 +106,9 @@ class TreePrinter {
 	private void printReportEntry(String indent, ReportEntry reportEntry) {
 		out.println();
 		out.print(indent);
-		out.print(reportEntry.getTimestamp().toString());
+		out.print(reportEntry.getTimestamp().format(REPORT_ENTRY_FORMATTER));
 		if (reportEntry.getKeyValuePairs().size() == 1) {
-			printReportEntry(": ", reportEntry.getKeyValuePairs().entrySet().iterator().next());
+			printReportEntry(" ", reportEntry.getKeyValuePairs().entrySet().iterator().next());
 			return;
 		}
 		for (Map.Entry<String, String> entry : reportEntry.getKeyValuePairs().entrySet()) {
@@ -111,11 +117,11 @@ class TreePrinter {
 		}
 	}
 
-	private void printReportEntry(String indent, Map.Entry<String, String> entry) {
+	private void printReportEntry(String indent, Map.Entry<String, String> mapEntry) {
 		out.print(indent);
-		out.print(entry.getKey());
+		out.print(color(YELLOW, mapEntry.getKey()));
 		out.print(" = `");
-		out.print(entry.getValue());
+		out.print(color(GREEN, mapEntry.getValue()));
 		out.print("`");
 	}
 
