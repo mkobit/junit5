@@ -11,6 +11,7 @@
 package org.junit.platform.console;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.util.ReflectionUtils.MethodSortOrder.HierarchyDown;
 
 import java.lang.annotation.Repeatable;
@@ -19,14 +20,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.TestReporter;
 import org.junit.platform.commons.util.AnnotationUtils;
+import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.console.options.Details;
 import org.junit.platform.console.options.Theme;
 
@@ -35,9 +40,10 @@ import org.junit.platform.console.options.Theme;
  */
 class ConsoleDetailsTests {
 
+	private static final String REGEX_PATTERN = "<- REGEX";
+
 	static class Container {
 
-		@Test
 		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
 				lines = { "╷", //
 						"└─ JUnit Jupiter ✔", //
@@ -59,11 +65,11 @@ class ConsoleDetailsTests {
 						"Finished:    failWithSingleLineMessage() ([engine:junit-jupiter]/[class:org.junit.platform.console.ConsoleDetailsTests$Container]/[method:failWithSingleLineMessage()])", //
 						"             => Exception: org.opentest4j.AssertionFailedError: single line fail message" //
 				})
+		@Test
 		void failWithSingleLineMessage() {
 			Assertions.fail("single line fail message");
 		}
 
-		@Test
 		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
 				lines = { "╷", //
 						"└─ JUnit Jupiter ✔", //
@@ -94,8 +100,63 @@ class ConsoleDetailsTests {
 						"             fail", //
 						"             message" //
 				})
+		@Test
 		void failWithMultiLineMessage() {
 			Assertions.fail("multi\nline\nfail\nmessage");
+		}
+
+		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
+				lines = { "╷", //
+						"└─ JUnit Jupiter ✔", //
+						"   └─ ConsoleDetailsTests$Container ✔", //
+						"      └─ reportSingleEntryWithSingleMapping(TestReporter) ✔", //
+						"            ....-..-..T..:..:......: foo = `bar`" + REGEX_PATTERN, //
+				})
+		@Test
+		void reportSingleEntryWithSingleMapping(TestReporter reporter) {
+			reporter.publishEntry("foo", "bar");
+		}
+
+		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
+				lines = { "╷", //
+						"└─ JUnit Jupiter ✔", //
+						"   └─ ConsoleDetailsTests$Container ✔", //
+						"      └─ reportMultiEntriesWithSingleMapping(TestReporter) ✔", //
+						"            ....-..-..T..:..:......: foo = `bar`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:......: far = `boo`" + REGEX_PATTERN, //
+				})
+		@Test
+		void reportMultiEntriesWithSingleMapping(TestReporter reporter) {
+			reporter.publishEntry("foo", "bar");
+			reporter.publishEntry("far", "boo");
+		}
+
+		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
+				lines = { "╷", //
+						"└─ JUnit Jupiter ✔", //
+						"   └─ ConsoleDetailsTests$Container ✔", //
+						"      └─ reportMultiEntriesWithMultiMappings(TestReporter) ✔", //
+						"            ....-..-..T..:..:......" + REGEX_PATTERN, //
+						"               user name = `dk38`", //
+						"               award year = `1974`", //
+						"            ....-..-..T..:..:......: single = `mapping`" + REGEX_PATTERN, //
+						"            ....-..-..T..:..:......" + REGEX_PATTERN, //
+						"               user name = `st77`", //
+						"               award year = `1977`", //
+						"               last seen = `2001`", //
+				})
+		@Test
+		void reportMultiEntriesWithMultiMappings(TestReporter reporter) {
+			Map<String, String> values = new LinkedHashMap<>();
+			values.put("user name", "dk38");
+			values.put("award year", "1974");
+			reporter.publishEntry(values);
+			reporter.publishEntry("single", "mapping");
+			Map<String, String> more = new LinkedHashMap<>();
+			more.put("user name", "st77");
+			more.put("award year", "1977");
+			more.put("last seen", "2001");
+			reporter.publishEntry(more);
 		}
 
 	}
@@ -128,15 +189,24 @@ class ConsoleDetailsTests {
 							"--details-theme", expect.theme().name(), //
 							"--disable-ansi-colors", "true", //
 							"--include-classname", ".*", //
-							"--select-method", method.getDeclaringClass().getName() + "#" + method.getName() //
+							"--select-method", ReflectionUtils.getFullyQualifiedMethodName(method) //
 					};
 					ConsoleLauncherWrapper wrapper = new ConsoleLauncherWrapper();
 					ConsoleLauncherWrapperResult result = wrapper.execute(Optional.empty(), args);
-					String expected = String.join(System.lineSeparator(), expect.lines());
+
 					int max = expect.lines().length;
 					List<String> actualLines = Arrays.asList(result.out.split("\\R", max + 1)).subList(0, max);
-					String actual = String.join(System.lineSeparator(), actualLines);
-					assertEquals(expected, actual, result.out);
+					for (int i = 0; i < max; i++) {
+						String actualLine = actualLines.get(i);
+						String expectedLine = expect.lines()[i];
+						if (expectedLine.endsWith(REGEX_PATTERN)) {
+							expectedLine = expectedLine.substring(0, expectedLine.length() - REGEX_PATTERN.length());
+							assertTrue(actualLine.matches(expectedLine), "\nactual string = " + actualLine
+									+ "\nregex pattern = " + expectedLine + "\n" + result.out);
+							continue;
+						}
+						assertEquals(expectedLine, actualLine);
+					}
 				});
 				tests.add(test);
 			}

@@ -18,11 +18,13 @@ import static org.junit.platform.console.tasks.Color.SKIPPED;
 
 import java.io.PrintWriter;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.junit.platform.commons.meta.API;
 import org.junit.platform.commons.util.StringUtils;
 import org.junit.platform.console.options.Theme;
 import org.junit.platform.engine.TestExecutionResult.Status;
+import org.junit.platform.engine.reporting.ReportEntry;
 
 /**
  * @since 1.0
@@ -50,7 +52,7 @@ class TreePrinter {
 		if (node.visible) {
 			String bullet = continuous ? theme.entry() : theme.end();
 			String prefix = color(CONTAINER, indent + bullet);
-			String multis = color(CONTAINER, indent + theme.blank() + theme.blank());
+			String tabbed = color(CONTAINER, indent + (continuous ? theme.vertical() : theme.blank()) + theme.blank());
 			String caption = color(Color.valueOf(node.identifier), node.caption);
 			String duration = color(CONTAINER, node.duration + " ms");
 			String icon = color(SKIPPED, theme.skipped());
@@ -75,11 +77,12 @@ class TreePrinter {
 			out.print(" ");
 			out.print(icon);
 			if (node.result != null) {
-				node.result.getThrowable().ifPresent(t -> printMessage(FAILED, multis, t.getMessage()));
+				node.result.getThrowable().ifPresent(t -> printMessage(FAILED, tabbed, t.getMessage()));
 			}
 			if (node.reason != null) {
-				printMessage(SKIPPED, multis, node.reason);
+				printMessage(SKIPPED, tabbed, node.reason);
 			}
+			node.reports.forEach(e -> printReportEntry(tabbed, e));
 			out.println();
 		}
 		if (node.children.isEmpty()) {
@@ -92,6 +95,28 @@ class TreePrinter {
 		while (iterator.hasNext()) {
 			print(iterator.next(), indent, iterator.hasNext());
 		}
+	}
+
+	private void printReportEntry(String indent, ReportEntry reportEntry) {
+		out.println();
+		out.print(indent);
+		out.print(reportEntry.getTimestamp().toString());
+		if (reportEntry.getKeyValuePairs().size() == 1) {
+			printReportEntry(": ", reportEntry.getKeyValuePairs().entrySet().iterator().next());
+			return;
+		}
+		for (Map.Entry<String, String> entry : reportEntry.getKeyValuePairs().entrySet()) {
+			out.println();
+			printReportEntry(indent + theme.blank(), entry);
+		}
+	}
+
+	private void printReportEntry(String indent, Map.Entry<String, String> entry) {
+		out.print(indent);
+		out.print(entry.getKey());
+		out.print(" = `");
+		out.print(entry.getValue());
+		out.print("`");
 	}
 
 	/**
