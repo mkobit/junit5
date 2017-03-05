@@ -27,6 +27,7 @@ import java.util.Map;
 import org.junit.platform.commons.meta.API;
 import org.junit.platform.commons.util.StringUtils;
 import org.junit.platform.console.options.Theme;
+import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.TestExecutionResult.Status;
 import org.junit.platform.engine.reporting.ReportEntry;
 
@@ -56,40 +57,7 @@ class TreePrinter {
 
 	private void print(TreeNode node, String indent, boolean continuous) {
 		if (node.visible) {
-			String bullet = continuous ? theme.entry() : theme.end();
-			String prefix = color(CONTAINER, indent + bullet);
-			String tabbed = color(CONTAINER, indent + (continuous ? theme.vertical() : theme.blank()) + theme.blank());
-			String caption = color(Color.valueOf(node.identifier), node.caption);
-			String duration = color(CONTAINER, node.duration + " ms");
-			String icon = color(SKIPPED, theme.skipped());
-			if (node.result != null) {
-				Color resultColor = Color.valueOf(node.result);
-				icon = color(resultColor, theme.status(node.result));
-				if (node.result.getStatus() != Status.SUCCESSFUL) {
-					caption = color(resultColor, node.caption);
-				}
-			}
-			if (node.reason != null) {
-				caption = color(SKIPPED, node.caption);
-			}
-			out.print(prefix);
-			out.print(" ");
-			out.print(caption);
-			if (node.duration > 10000 && node.children.isEmpty()) {
-				// out.print(new String(new char[60 - (indent + bullet + node.caption).length()]).replace('\0', ' '));
-				out.print(" ");
-				out.print(duration);
-			}
-			out.print(" ");
-			out.print(icon);
-			if (node.result != null) {
-				node.result.getThrowable().ifPresent(t -> printMessage(FAILED, tabbed, t.getMessage()));
-			}
-			if (node.reason != null) {
-				printMessage(SKIPPED, tabbed, node.reason);
-			}
-			node.reports.forEach(e -> printReportEntry(tabbed, e));
-			out.println();
+			printVisible(node, indent, continuous);
 		}
 		if (node.children.isEmpty()) {
 			return;
@@ -101,6 +69,61 @@ class TreePrinter {
 		while (iterator.hasNext()) {
 			print(iterator.next(), indent, iterator.hasNext());
 		}
+	}
+
+	private void printVisible(TreeNode node, String indent, boolean continuous) {
+		String bullet = continuous ? theme.entry() : theme.end();
+		String prefix = color(CONTAINER, indent + bullet);
+		String tabbed = color(CONTAINER, indent + (continuous ? theme.vertical() : theme.blank()) + theme.blank());
+		String caption = colorCaption(node);
+		String duration = color(CONTAINER, node.duration + " ms");
+		String icon = color(SKIPPED, theme.skipped());
+		if (node.result().isPresent()) {
+			TestExecutionResult result = node.result().get();
+			Color resultColor = Color.valueOf(result);
+			icon = color(resultColor, theme.status(result));
+		}
+		out.print(prefix);
+		out.print(" ");
+		out.print(caption);
+		if (node.duration > 10000 && node.children.isEmpty()) {
+			// out.print(new String(new char[60 - (indent + bullet + node.caption).length()]).replace('\0', ' '));
+			out.print(" ");
+			out.print(duration);
+		}
+		out.print(" ");
+		out.print(icon);
+		node.result().ifPresent(result -> printThrowable(tabbed, result));
+		node.reason().ifPresent(reason -> printMessage(SKIPPED, tabbed, reason));
+		node.reports.forEach(e -> printReportEntry(tabbed, e));
+		out.println();
+	}
+
+	private String colorCaption(TreeNode node) {
+		String caption = node.caption();
+		if (node.result().isPresent()) {
+			TestExecutionResult result = node.result().get();
+			Color resultColor = Color.valueOf(result);
+			if (result.getStatus() != Status.SUCCESSFUL) {
+				return color(resultColor, caption);
+			}
+		}
+		if (node.reason().isPresent()) {
+			return color(SKIPPED, caption);
+		}
+		return color(Color.valueOf(node.identifier().orElseThrow(AssertionError::new)), caption);
+	}
+
+	private void printThrowable(String indent, TestExecutionResult result) {
+		if (!result.getThrowable().isPresent()) {
+			return;
+		}
+		Throwable throwable = result.getThrowable().get();
+		printMessage(FAILED, indent, throwable.getMessage());
+		// ...or print entire stacktrace?
+		// out.println();
+		// out.print(indent + color(FAILED, theme.vertical()));
+		// printMessage(FAILED, indent, ExceptionUtils.readStackTrace(throwable));
 	}
 
 	private void printReportEntry(String indent, ReportEntry reportEntry) {
@@ -137,7 +160,8 @@ class TreePrinter {
 				out.println();
 				out.print(indent);
 				if (StringUtils.isNotBlank(lines[i])) {
-					out.print(color(color, theme.vertical() + lines[i]));
+					String extra = theme.blank(); // i + 1 < lines.length ? theme.vertical() : theme.end() + " ";
+					out.print(color(color, extra + lines[i]));
 				}
 			}
 		}

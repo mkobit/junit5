@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -43,6 +44,34 @@ class ConsoleDetailsTests {
 	private static final String REGEX_PATTERN = "<- REGEX";
 
 	static class Container {
+
+		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
+				lines = { "╷", //
+						"└─ JUnit Jupiter ✔", //
+						"   └─ ConsoleDetailsTests$Container ✔", //
+						"      └─ skipWithSingleLineReason() ↷ single line skip reason" //
+				})
+		@Expect(details = Details.TREE, theme = Theme.ASCII, //
+				lines = { ".", //
+						"'-- JUnit Jupiter [OK]", //
+						"  '-- ConsoleDetailsTests$Container [OK]", //
+						"    '-- skipWithSingleLineReason() [S] single line skip reason" //
+				})
+		@Expect(details = Details.FLAT, theme = Theme.UNICODE, //
+				lines = { //
+						"Test execution started. Number of static tests: 1", //
+						"Started:     JUnit Jupiter ([engine:junit-jupiter])", //
+						"Started:     ConsoleDetailsTests$Container ([engine:junit-jupiter]/[class:org.junit.platform.console.ConsoleDetailsTests$Container])", //
+						"Skipped:     skipWithSingleLineReason() ([engine:junit-jupiter]/[class:org.junit.platform.console.ConsoleDetailsTests$Container]/[method:skipWithSingleLineReason()])", //
+						"             => Reason: single line skip reason", //
+						"Finished:    ConsoleDetailsTests$Container ([engine:junit-jupiter]/[class:org.junit.platform.console.ConsoleDetailsTests$Container])", //
+						"Finished:    JUnit Jupiter ([engine:junit-jupiter])", //
+						"Test execution finished.", //
+				})
+		@Test
+		@Disabled("single line skip reason")
+		void skipWithSingleLineReason() {
+		}
 
 		@Expect(details = Details.TREE, theme = Theme.UNICODE, //
 				lines = { "╷", //
@@ -75,18 +104,18 @@ class ConsoleDetailsTests {
 						"└─ JUnit Jupiter ✔", //
 						"   └─ ConsoleDetailsTests$Container ✔", //
 						"      └─ failWithMultiLineMessage() ✘ multi", //
-						"            │  line", //
-						"            │  fail", //
-						"            │  message" //
+						"               line", //
+						"               fail", //
+						"               message" //
 				})
 		@Expect(details = Details.TREE, theme = Theme.ASCII, //
 				lines = { ".", //
 						"'-- JUnit Jupiter [OK]", //
 						"  '-- ConsoleDetailsTests$Container [OK]", //
 						"    '-- failWithMultiLineMessage() [X] multi", //
-						"        | line", //
-						"        | fail", //
-						"        | message" //
+						"          line", //
+						"          fail", //
+						"          message" //
 				})
 		@Expect(details = Details.FLAT, theme = Theme.UNICODE, //
 				lines = { //
@@ -205,7 +234,7 @@ class ConsoleDetailsTests {
 									+ "\nregex pattern = " + expectedLine + "\n" + result.out + "\n" + result.err);
 							continue;
 						}
-						assertEquals(expectedLine, actualLine);
+						assertEquals(expectedLine, actualLine, "\n" + result.out + "\n" + result.err);
 					}
 				});
 				tests.add(test);
