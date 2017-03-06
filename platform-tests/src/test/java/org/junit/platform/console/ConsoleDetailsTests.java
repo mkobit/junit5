@@ -114,8 +114,7 @@ class ConsoleDetailsTests {
 		for (Method method : AnnotationUtils.findAnnotatedMethods(containerClass, Test.class, HierarchyDown)) {
 			for (Details details : Details.values()) {
 				for (Theme theme : Theme.values()) {
-					String caption = String.join("-", containerName, method.getName(), details.toString(),
-						theme.toString());
+					String caption = containerName + "-" + method.getName() + "-" + details + "-" + theme;
 					String dirName = "console/details/" + containerName;
 					String outName = caption + ".out.txt";
 					String[] args = { //
@@ -126,7 +125,7 @@ class ConsoleDetailsTests {
 							"--include-classname", containerClass.getCanonicalName(), //
 							"--select-method", ReflectionUtils.getFullyQualifiedMethodName(method) //
 					};
-					String displayName = method.getName() + "() details=" + details.name() + " theme=" + theme.name();
+					String displayName = method.getName() + " theme=" + theme.name() + "() details=" + details.name();
 					tests.add(DynamicTest.dynamicTest(displayName, new Runner(temp, dirName, outName, args)));
 				}
 			}
@@ -160,11 +159,11 @@ class ConsoleDetailsTests {
 
 			URL url = getClass().getClassLoader().getResource(dirName + "/" + outName);
 			if (url == null) {
-				// if (temp != null) {
-				//	Path path = Files.write(temp.resolve(outName), result.out.getBytes(UTF_8));
-				//					System.out.println("Wrote " + path);
-				//					return;
-				// }
+				if (temp != null) {
+					Path path = Files.write(temp.resolve(outName), result.out.getBytes(UTF_8));
+					System.out.println("wrote " + path);
+					return;
+				}
 				fail("could not load resource: " + dirName + "/" + outName);
 			}
 
@@ -181,7 +180,7 @@ class ConsoleDetailsTests {
 
 			if (expectedSize == actualSize) {
 				for (int i = 0; i < expectedSize; i++) {
-					assertTrue(compare(expectedLines.get(i), actualLines.get(i)));
+					assertMatches(expectedLines.get(i), actualLines.get(i), i, i);
 				}
 				return;
 			}
@@ -195,16 +194,16 @@ class ConsoleDetailsTests {
 				if (expectedLine.equals(actualLine)) {
 					continue;
 				}
-				// "S T A C K T R A C E" marker found in expected line: fast forward actual line until next match
+				// "S T A C K T R A C E" marker found as expected line: fast forward actual line until next match
 				if (expectedLine.equals("S T A C K T R A C E")) {
-					int peekExpectedIndex = e + 1;
-					if (peekExpectedIndex >= expectedSize) {
+					int nextExpectedIndex = e + 1;
+					if (nextExpectedIndex >= expectedSize) {
 						// trivial case: marker was last line in expected list
 						return;
 					}
-					expectedLine = expectedLines.get(peekExpectedIndex);
+					expectedLine = expectedLines.get(nextExpectedIndex);
 					int ahead = a;
-					while (!compare(expectedLine, actualLine, false)) {
+					while (!matches(expectedLine, actualLine, false)) {
 						actualLine = actualLines.get(ahead++);
 						if (ahead >= actualSize) {
 							fail("ran out of bounds");
@@ -214,17 +213,22 @@ class ConsoleDetailsTests {
 					continue;
 				}
 				// now, assert equality of expect and actual line
-				String message = "\nexpected:" + e + " = " + expectedLine + "\nactual:" + a + " = " + actualLine;
-				assertTrue(compare(expectedLine, actualLine), message);
+				assertMatches(expectedLine, actualLine, e, a);
 			}
 
 		}
 
-		private boolean compare(String expectedLine, String actualLine) {
-			return compare(expectedLine, actualLine, true);
+		private void assertMatches(String expectedLine, String actualLine, int expectedIndex, int actualIndex) {
+			assertTrue(matches(expectedLine, actualLine), //
+				() -> String.format("%nexpected:%d = %s%nactual:%d = %s", //
+					expectedIndex, expectedLine, actualIndex, actualLine));
 		}
 
-		private boolean compare(String expectedLine, String actualLine, boolean failOnPatternSyntaxException) {
+		private boolean matches(String expectedLine, String actualLine) {
+			return matches(expectedLine, actualLine, true);
+		}
+
+		private boolean matches(String expectedLine, String actualLine, boolean failOnPatternSyntaxException) {
 			if (expectedLine.equals(actualLine)) {
 				return true;
 			}
