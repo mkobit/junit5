@@ -160,11 +160,11 @@ class ConsoleDetailsTests {
 
 			URL url = getClass().getClassLoader().getResource(dirName + "/" + outName);
 			if (url == null) {
-				if (temp != null) {
-					Path path = Files.write(temp.resolve(outName), result.out.getBytes(UTF_8));
-					System.out.println("Wrote " + path);
-					return;
-				}
+				// if (temp != null) {
+				//	Path path = Files.write(temp.resolve(outName), result.out.getBytes(UTF_8));
+				//					System.out.println("Wrote " + path);
+				//					return;
+				// }
 				fail("could not load resource: " + dirName + "/" + outName);
 			}
 
